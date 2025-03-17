@@ -1,4 +1,4 @@
-// middleware.ts (or middleware.js)
+// middleware.ts
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -11,10 +11,8 @@ export async function updateSession(request: NextRequest) {
       {
         auth: {
           storage: {
-            getItem: (key: string): string | null => {
-              // Read the cookie value from the request.
-              return request.cookies.get(key)?.value || null;
-            },
+            getItem: (key: string): string | null =>
+              request.cookies.get(key)?.value || null,
             setItem: (_key: string, _value: string): void => {
               // Not supported in Edge Middleware.
             },
@@ -22,14 +20,16 @@ export async function updateSession(request: NextRequest) {
               // Not supported in Edge Middleware.
             },
           },
-          // Disable session persistence since we are handling cookies manually.
           persistSession: false,
         },
       }
     );
 
     // Get the current user session.
-    const { data: { user }, error } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
 
     let response = NextResponse.next();
 
@@ -45,7 +45,7 @@ export async function updateSession(request: NextRequest) {
 
     return response;
   } catch (e) {
-    // On error, continue with the request.
+    // If an error occurs, continue with the request.
     return NextResponse.next();
   }
 }
