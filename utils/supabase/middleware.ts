@@ -1,7 +1,8 @@
+// middleware.ts (or middleware.js)
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 
-export const updateSession = async (request: NextRequest) => {
+export async function updateSession(request: NextRequest) {
   try {
     // Create a Supabase client with custom auth storage that reads cookies from the request.
     const supabase = createClient(
@@ -9,23 +10,19 @@ export const updateSession = async (request: NextRequest) => {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         auth: {
-          // Provide custom storage methods so the client can read the auth cookie.
           storage: {
             getItem: (key: string): string | null => {
-              // The auth token is expected to be stored under a key (e.g., "sb:token")
-              // Adjust the key name as needed based on your Supabase auth configuration.
+              // Read the cookie value from the request.
               return request.cookies.get(key)?.value || null;
             },
             setItem: (_key: string, _value: string): void => {
-              // In Edge Middleware we cannot modify the request cookies directly.
-              // A full solution would update the response cookies accordingly.
-              // This is a no-op for now.
+              // Not supported in Edge Middleware.
             },
             removeItem: (_key: string): void => {
-              // No-op in this simplified example.
+              // Not supported in Edge Middleware.
             },
           },
-          // Since we're handling the cookie manually, disable session persistence.
+          // Disable session persistence since we are handling cookies manually.
           persistSession: false,
         },
       }
@@ -48,7 +45,13 @@ export const updateSession = async (request: NextRequest) => {
 
     return response;
   } catch (e) {
-    // If an error occurs (for example, missing environment variables), continue with the request.
+    // On error, continue with the request.
     return NextResponse.next();
   }
+}
+
+export const config = {
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
 };
