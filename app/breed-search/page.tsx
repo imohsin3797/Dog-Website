@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
 export default function SearchBreed() {
   const [breed, setBreed] = useState("");
   const router = useRouter();
 
-  const handleSearch = (event) => {
+  const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (breed.trim()) {
       router.push(`/breed/${breed.trim()}`);

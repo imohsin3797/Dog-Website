@@ -1,7 +1,10 @@
+"use client";
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import DogCard from "@/components/DogCard";
 import { Grid } from "@mui/material";
 
-async function getBreedImages(breed: string) {
+async function getBreedImages(breed: string): Promise<string[]> {
   try {
     const res = await fetch(`https://dog.ceo/api/breed/${breed}/images`);
     const data = await res.json();
@@ -12,21 +15,45 @@ async function getBreedImages(breed: string) {
   }
 }
 
-function getRandomName() {
-  const names = ["Buddy", "Charlie", "Max", "Bella", "Lucy", "Daisy", "Rocky", "Milo", "Zoe", "Luna", "Bailey", "Sadie"];
+function getRandomName(): string {
+  const names = [
+    "Buddy",
+    "Charlie",
+    "Max",
+    "Bella",
+    "Lucy",
+    "Daisy",
+    "Rocky",
+    "Milo",
+    "Zoe",
+    "Luna",
+    "Bailey",
+    "Sadie",
+  ];
   return names[Math.floor(Math.random() * names.length)];
 }
 
-export default async function BreedPage({
-  params,
-}: {
-  params: { breed: string };
-}) {
-  const images = await getBreedImages(params.breed);
+export default function BreedPage() {
+  const { breed } = useParams();
+  const breedName = Array.isArray(breed) ? breed[0] : breed;
+  const [images, setImages] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (breedName) {
+      (async () => {
+        const fetchedImages = await getBreedImages(breedName);
+        setImages(fetchedImages);
+      })();
+    }
+  }, [breedName]);
+
+  if (!breedName) {
+    return <div>No breed specified</div>;
+  }
 
   return (
     <div>
-      <h1>Breed: {params.breed}</h1>
+      <h1>Breed: {breedName}</h1>
       {images.length > 0 ? (
         <Grid container spacing={4} justifyContent="center">
           {images.map((imgUrl: string, index: number) => (
