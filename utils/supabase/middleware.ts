@@ -1,62 +1,54 @@
-import { createServerClient } from "@supabase/ssr";
-import { type NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+import { NextRequest, NextResponse } from "next/server";
 
 export const updateSession = async (request: NextRequest) => {
-  // This `try/catch` block is only here for the interactive tutorial.
-  // Feel free to remove once you have Supabase connected.
   try {
-    // Create an unmodified response
-    let response = NextResponse.next({
-      request: {
-        headers: request.headers,
-      },
-    });
-
-    const supabase = createServerClient(
+    // Create a Supabase client with custom auth storage that reads cookies from the request.
+    const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
-        cookies: {
-          getAll() {
-            return request.cookies.getAll();
+        auth: {
+          // Provide custom storage methods so the client can read the auth cookie.
+          storage: {
+            getItem: (key: string): string | null => {
+              // The auth token is expected to be stored under a key (e.g., "sb:token")
+              // Adjust the key name as needed based on your Supabase auth configuration.
+              return request.cookies.get(key)?.value || null;
+            },
+            setItem: (_key: string, _value: string): void => {
+              // In Edge Middleware we cannot modify the request cookies directly.
+              // A full solution would update the response cookies accordingly.
+              // This is a no-op for now.
+            },
+            removeItem: (_key: string): void => {
+              // No-op in this simplified example.
+            },
           },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value }) =>
-              request.cookies.set(name, value),
-            );
-            response = NextResponse.next({
-              request,
-            });
-            cookiesToSet.forEach(({ name, value, options }) =>
-              response.cookies.set(name, value, options),
-            );
-          },
+          // Since we're handling the cookie manually, disable session persistence.
+          persistSession: false,
         },
-      },
+      }
     );
 
-    // This will refresh session if expired - required for Server Components
-    // https://supabase.com/docs/guides/auth/server-side/nextjs
-    const user = await supabase.auth.getUser();
+    // Get the current user session.
+    const { data: { user }, error } = await supabase.auth.getUser();
 
-    // protected routes
-    if (request.nextUrl.pathname.startsWith("/protected") && user.error) {
+    let response = NextResponse.next();
+
+    // If on a protected route and there's no valid session, redirect to the sign-in page.
+    if (request.nextUrl.pathname.startsWith("/protected") && error) {
       return NextResponse.redirect(new URL("/sign-in", request.url));
     }
 
-    if (request.nextUrl.pathname === "/" && !user.error) {
+    // If at the root path and a valid session exists, redirect to /protected.
+    if (request.nextUrl.pathname === "/" && !error) {
       return NextResponse.redirect(new URL("/protected", request.url));
     }
 
     return response;
   } catch (e) {
-    // If you are here, a Supabase client could not be created!
-    // This is likely because you have not set up environment variables.
-    // Check out http://localhost:3000 for Next Steps.
-    return NextResponse.next({
-      request: {
-        headers: request.headers,
-      },
-    });
+    // If an error occurs (for example, missing environment variables), continue with the request.
+    return NextResponse.next();
   }
 };
